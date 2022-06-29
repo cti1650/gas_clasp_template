@@ -1,4 +1,4 @@
-# Gas Clasp Template
+# GAS Clasp Template
 
 ## 目的
 
