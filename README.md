@@ -1,4 +1,8 @@
-# Notion Test Script for GAS
+# Gas Clasp Template
+
+## 目的
+
+GASでスクリプトを作成するにあたり都度設定していた内容をすぐに使い始めれるようにテンプレート化し開発の効率化を図る
 
 ## 開発方法
 
