@@ -19,5 +19,8 @@ module.exports = {
       { functions: true, classes: true, variables: true },
     ],
   },
-  rules: {},
+  rules: {
+    'no-unused-vars': 'off',
+    'no-undef': 'off',
+  },
 };
