@@ -4,8 +4,8 @@
   "description": "",
   "scripts": {
     "init-serve": "clasp login --no-localhost",
-    "lint": "eslint \"./src/**/*.{js,ts,tsx}\" --fix --max-warnings 65",
-    "format": "prettier --write \"./src/**/*.{js,ts,tsx,json}\"",
+    "lint": "eslint \"./src/**/*.{js,ts}\" --fix --max-warnings 65",
+    "format": "prettier --write \"./src/**/*.{js,ts}\"",
     "prepare": "husky install"
   },
   "devDependencies": {
