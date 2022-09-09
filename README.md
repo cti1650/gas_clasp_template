@@ -9,12 +9,39 @@ GASでスクリプトを作成するにあたり都度設定していた内容�
 詳細は[Document](https://developers.google.com/apps-script/guides/clasp)を参照
 
 [claspを使ってGoogle Apps Scriptの開発環境を構築してみた | DevelopersIO](https://dev.classmethod.jp/articles/vscode-clasp-setting/)  
+[GASをgit管理したいので、Clasp環境を作る](https://zenn.dev/marusho/scraps/3579309aabf5eb)  
 
+
+
+
+### ログイン
+
+```
+clasp login
+```
+
+### 既存スクリプトをcloneする
+
+```
+clasp clone {scriptId}
+```
 
 ### GAS を開く
 
 ```
 clasp open
+```
+
+### スクリプトをpushする
+
+```
+clasp push
+```
+
+### スクリプトをpullする
+
+```
+clasp pull
 ```
 
 ### 状況確認
