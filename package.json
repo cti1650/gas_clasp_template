@@ -2,6 +2,9 @@
   "name": "gas_clasp_template",
   "version": "1.0.0",
   "description": "",
+  "scripts": {
+    "init-serve": "clasp login --no-localhost"
+  },
   "devDependencies": {
     "@types/google-apps-script": "^1.0.49",
     "eslint": "^8.18.0",
