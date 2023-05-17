@@ -4,6 +4,7 @@
   "description": "",
   "scripts": {
     "init-serve": "clasp login --no-localhost",
+    "deploy": "sh script/deploy.sh",
     "lint": "eslint \"./src/**/*.{js,ts}\" --fix --max-warnings 65",
     "format": "prettier --write \"./src/**/*.{js,ts}\"",
     "prepare": "husky install"
