@@ -4,7 +4,14 @@
   "description": "",
   "scripts": {
     "init-serve": "clasp login --no-localhost",
-    "deploy": "sh script/deploy.sh",
+    "push": "cp .clasp-staging.json .clasp.json && clasp push",
+    "push:prod": "cp .clasp-prod.json .clasp.json && clasp push",
+    "pull": "cp .clasp-staging.json .clasp.json && clasp pull",
+    "pull:prod": "cp .clasp-prod.json .clasp.json && clasp pull",
+    "open": "cp .clasp-staging.json .clasp.json && clasp open",
+    "open:prod": "cp .clasp-prod.json .clasp.json && clasp open",
+    "deploy": "cp .clasp-staging.json .clasp.json && sh script/deploy.sh",
+    "deploy:prod": "cp .clasp-prod.json .clasp.json && sh script/deploy.sh",
     "lint": "eslint \"./src/**/*.{js,ts}\" --fix --max-warnings 65",
     "format": "prettier --write \"./src/**/*.{js,ts}\"",
     "prepare": "husky install"
@@ -21,12 +28,7 @@
     "prettier": "^2.7.1"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{css,less,sass,scss}": [
-      "stylelint --fix"
-    ]
+    "*.{js,jsx,ts,tsx}": ["eslint --fix", "prettier --write"],
+    "*.{css,less,sass,scss}": ["stylelint --fix"]
   }
 }

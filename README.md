@@ -23,7 +23,7 @@ clasp login
 ### 既存スクリプトをcloneする
 
 ```
-clasp clone {scriptId}
+clasp clone {scriptId} --rootDir ./src
 ```
 
 ### GAS を開く
@@ -32,17 +32,63 @@ clasp clone {scriptId}
 clasp open
 ```
 
+- Staging環境
+  ```
+  yarn open
+  ```
+
+- Prod環境
+  ```
+  yarn open:prod
+  ```
+
 ### スクリプトをpushする
 
 ```
 clasp push
 ```
 
+- Staging環境
+  ```
+  yarn push
+  ```
+
+- Prod環境
+  ```
+  yarn push:prod
+  ```
+
 ### スクリプトをpullする
 
 ```
 clasp pull
 ```
+
+- Staging環境
+  ```
+  yarn pull
+  ```
+
+- Prod環境
+  ```
+  yarn pull:prod
+  ```
+
+### デプロイをアップデートする(初回は手動でデプロイ要)
+
+```
+clasp deploy
+```
+
+- Staging環境
+  ```
+  yarn deploy
+  ```
+
+- Prod環境
+  ```
+  yarn deploy:prod
+  ```
 
 ### 状況確認
 
