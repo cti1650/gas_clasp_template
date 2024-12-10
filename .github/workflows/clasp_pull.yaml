@@ -51,14 +51,66 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
+          cache: 'yarn'
+          cache-dependency-path: '**/yarn.lock'
+
+      - name: Cache Global Packages
+        uses: actions/cache@v4
+        id: cache_global_clasp
+        with:
+          path: ~/.npm-global
+          key: ${{ runner.os }}-global-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-global-
+
+      - name: Setup Global NPM Path
+        run: |
+          yarn global add node-gyp
+          npm config set prefix '~/.npm-global'
+          echo "~/.npm-global/bin" >> $GITHUB_PATH
 
       - name: Install Clasp
+        if: steps.cache_global_clasp.outputs.cache-hit != 'true'
         run: |
-          npm install -g @google/clasp
+          yarn global add @google/clasp
+
+      - name: Save yarn Cache
+        uses: actions/cache@v4
+        id: cache_yarn_post
+        with:
+          path: ~/.yarn
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Cache Dependency
+        uses: actions/cache@v4
+        id: cache_dependency
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-build-${{ hashFiles('yarn.lock') }}
+
+      - name: Install Dependency
+        if: steps.cache_dependency.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile --silent
+
+      - name: Check Push Secrets
+        id: check-push-secret
+        env:
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          SCRIPT_ID: ${{ secrets.SCRIPT_ID }}
+        run: |
+          interrupt=false
+
+          if [ -z "$ACCESS_TOKEN" ] || [ -z "$CLIENT_ID" ] || [ -z "$SCRIPT_ID" ]; then
+            interrupt=true
+          fi
+
+          echo "interrupt=$interrupt" >> $GITHUB_OUTPUT
 
       - name: Generate ~/.clasprc.json
+        if: steps.check-push-secret.outputs.interrupt != 'true'
         env:
           PREFIX: ${{ steps.secret-env.outputs.prefix }}
           ACCESS_TOKEN: ${{ secrets[format('{0}ACCESS_TOKEN', steps.secret-env.outputs.prefix)] || secrets.ACCESS_TOKEN }}
@@ -90,6 +142,7 @@ jobs:
           fi
 
       - name: Generate ~/.clasp.json
+        if: steps.check-push-secret.outputs.interrupt != 'true'
         env:
           PREFIX: ${{ steps.secret-env.outputs.prefix }}
           SCRIPT_ID: ${{ secrets[format('{0}SCRIPT_ID', steps.secret-env.outputs.prefix)] || secrets.SCRIPT_ID }}
@@ -106,33 +159,70 @@ jobs:
 
       - name: Clasp Pull
         run: |
+          mkdir -p ./src
+          
           clasp pull
+          echo "Pulled files:"
+          ls -la ./src
+          
+          git status
+
+      - name: Get Default Branch
+        id: default-branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DEFAULT_BRANCH=$(gh repo view --json defaultBranchRef --jq .defaultBranchRef.name)
+          echo "name=$DEFAULT_BRANCH" >> $GITHUB_OUTPUT
 
       - name: Configure Git
         run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "<>"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Create Branch
+      - name: Create Branch and Commit
         env:
           ENVIRONMENT: ${{ inputs.environment }}
+          DEFAULT_BRANCH: ${{ steps.default-branch.outputs.name }}
         run: |
           TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
           BRANCH_NAME="clasp-pull-$ENVIRONMENT-$TIMESTAMP"
-          git checkout -b $BRANCH_NAME
-          git add ./src
-          git commit -m "Pull latest code from Google Apps Script ($ENVIRONMENT)"
-          git push -u origin $BRANCH_NAME
-          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+          
+          git fetch origin $DEFAULT_BRANCH
+          
+          git checkout -b $BRANCH_NAME origin/$DEFAULT_BRANCH
+          
+          if git status --porcelain | grep .; then
+            git add ./src
+            git commit -m "Pull latest code from Google Apps Script ($ENVIRONMENT)"
+            
+            echo "Pushing changes to $BRANCH_NAME..."
+            git push -u origin $BRANCH_NAME || {
+              echo "Push failed. Debug info:"
+              git status
+              git branch -vv
+              exit 1
+            }
+            
+            echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+            echo "HAS_CHANGES=true" >> $GITHUB_ENV
+          else
+            echo "No changes detected"
+            echo "HAS_CHANGES=false" >> $GITHUB_ENV
+          fi
 
       - name: Create Pull Request
+        if: env.HAS_CHANGES == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ENVIRONMENT: ${{ inputs.environment }}
+          DEFAULT_BRANCH: ${{ steps.default-branch.outputs.name }}
         run: |
+          sleep 5
+          
           gh pr create \
-            --base main \
-            --head ${{ env.BRANCH_NAME }} \
+            --base $DEFAULT_BRANCH \
+            --head "${{ env.BRANCH_NAME }}" \
             --title "Pull latest code from Google Apps Script ($ENVIRONMENT)" \
             --body "Automatically pulled latest code from Google Apps Script for $ENVIRONMENT environment.
 
