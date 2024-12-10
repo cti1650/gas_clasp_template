@@ -16,7 +16,8 @@
     "deploy:prod": "yarn clasp-env:prod && sh script/deploy.sh",
     "lint": "eslint \"./src/**/*.{js,ts}\" --fix --max-warnings 65",
     "format": "prettier --write \"./src/**/*.{js,ts}\"",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "audit-fix": "npx yarn-audit-fix"
   },
   "devDependencies": {
     "@types/google-apps-script": "^1.0.49",
@@ -27,10 +28,16 @@
     "eslint-plugin-import": "^2.26.0",
     "husky": "^8.0.1",
     "lint-staged": "^13.0.3",
-    "prettier": "^2.7.1"
+    "prettier": "^2.7.1",
+    "yarn-audit-fix": "^10.1.1"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx}": ["eslint --fix", "prettier --write"],
-    "*.{css,less,sass,scss}": ["stylelint --fix"]
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{css,less,sass,scss}": [
+      "stylelint --fix"
+    ]
   }
 }
