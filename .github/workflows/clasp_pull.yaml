@@ -1,0 +1,149 @@
+# GASの既存のコードをclaspでプルしてPRするAction
+---
+name: Clasp Pull Code
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Select environment to pull code from'
+        required: true
+        type: choice
+        options:
+          - deployment
+          - staging
+          - production
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  pull-clasp-code:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Determine Secret Environment Prefix
+        id: secret-env
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          case $ENVIRONMENT in
+            deployment)
+              PREFIX="DEV_"
+              ;;
+            staging)
+              PREFIX="STAGING_"
+              ;;
+            production)
+              PREFIX="PROD_"
+              ;;
+            *)
+              PREFIX=""
+              ;;
+          esac
+          echo "prefix=$PREFIX" >> $GITHUB_OUTPUT
+
+      - name: Setup repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Install Clasp
+        run: |
+          npm install -g @google/clasp
+
+      - name: Generate ~/.clasprc.json
+        env:
+          PREFIX: ${{ steps.secret-env.outputs.prefix }}
+          ACCESS_TOKEN: ${{ secrets[format('{0}ACCESS_TOKEN', steps.secret-env.outputs.prefix)] || secrets.ACCESS_TOKEN }}
+          ID_TOKEN: ${{ secrets[format('{0}ID_TOKEN', steps.secret-env.outputs.prefix)] || secrets.ID_TOKEN }}
+          REFRESH_TOKEN: ${{ secrets[format('{0}REFRESH_TOKEN', steps.secret-env.outputs.prefix)] || secrets.REFRESH_TOKEN }}
+          CLIENT_ID: ${{ secrets[format('{0}CLIENT_ID', steps.secret-env.outputs.prefix)] || secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets[format('{0}CLIENT_SECRET', steps.secret-env.outputs.prefix)] || secrets.CLIENT_SECRET }}
+        run: |
+          echo '{
+            "token": {
+              "access_token": "'$ACCESS_TOKEN'",
+              "refresh_token": "'$REFRESH_TOKEN'",
+              "scope": "https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/service.management https://www.googleapis.com/auth/script.deployments https://www.googleapis.com/auth/logging.read https://www.googleapis.com/auth/script.webapp.deploy https://www.googleapis.com/auth/userinfo.profile openid https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/script.projects https://www.googleapis.com/auth/drive.metadata.readonly",
+              "token_type": "Bearer",
+              "id_token": "'$ID_TOKEN'",
+              "expiry_date": 1728331650371
+            },
+            "oauth2ClientSettings": {
+              "clientId": "'$CLIENT_ID'",
+              "clientSecret": "'$CLIENT_SECRET'",
+              "redirectUri": "http://localhost"
+            },
+            "isLocalCreds": false
+          }' | if command -v jq > /dev/null; then
+            jq '.' > ~/.clasprc.json
+          else
+            echo "::error::jq is not installed"
+            exit 1
+          fi
+
+      - name: Generate ~/.clasp.json
+        env:
+          PREFIX: ${{ steps.secret-env.outputs.prefix }}
+          SCRIPT_ID: ${{ secrets[format('{0}SCRIPT_ID', steps.secret-env.outputs.prefix)] || secrets.SCRIPT_ID }}
+        run: |
+          echo '{
+            "scriptId": "'$SCRIPT_ID'",
+            "rootDir": "./src"
+          }' | if command -v jq > /dev/null; then
+            jq '.' > ~/.clasp.json
+          else
+            echo "::error::jq is not installed"
+            exit 1
+          fi
+
+      - name: Clasp Pull
+        run: |
+          clasp pull
+
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+
+      - name: Create Branch
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+          BRANCH_NAME="clasp-pull-$ENVIRONMENT-$TIMESTAMP"
+          git checkout -b $BRANCH_NAME
+          git add ./src
+          git commit -m "Pull latest code from Google Apps Script ($ENVIRONMENT)"
+          git push -u origin $BRANCH_NAME
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+
+      - name: Create Pull Request
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          gh pr create \
+            --base main \
+            --head ${{ env.BRANCH_NAME }} \
+            --title "Pull latest code from Google Apps Script ($ENVIRONMENT)" \
+            --body "Automatically pulled latest code from Google Apps Script for $ENVIRONMENT environment.
+
+            Changes include:
+            - Latest code from Google Apps Script
+            - Pulled using clasp
+            - Automated by GitHub Actions"
+
+      - name: Summary
+        run: |
+          echo "## Clasp Pull Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment: ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Pull Timestamp: $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch Created: ${{ env.BRANCH_NAME }}" >> $GITHUB_STEP_SUMMARY
