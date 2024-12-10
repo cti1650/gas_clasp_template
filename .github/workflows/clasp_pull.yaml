@@ -58,21 +58,26 @@ jobs:
         uses: actions/cache@v4
         id: cache_global_clasp
         with:
-          path: ~/.npm-global
-          key: ${{ runner.os }}-global-${{ hashFiles('**/yarn.lock') }}
+          path: |
+            ~/.npm-global
+            ~/.config/clasp
+          key: ${{ runner.os }}-global-clasp-${{ hashFiles('**/package.json') }}
           restore-keys: |
-            ${{ runner.os }}-global-
+            ${{ runner.os }}-global-clasp-
 
       - name: Setup Global NPM Path
         run: |
-          yarn global add node-gyp
+          mkdir -p ~/.npm-global
           npm config set prefix '~/.npm-global'
-          echo "~/.npm-global/bin" >> $GITHUB_PATH
+          echo "PATH=~/.npm-global/bin:$PATH" >> $GITHUB_ENV
 
       - name: Install Clasp
         if: steps.cache_global_clasp.outputs.cache-hit != 'true'
         run: |
-          yarn global add @google/clasp
+          npm install -g @google/clasp
+          which clasp || echo "clasp not found in PATH"
+          echo "Installed clasp version:"
+          clasp --version || echo "Failed to run clasp --version"
 
       - name: Save yarn Cache
         uses: actions/cache@v4
