@@ -2,6 +2,10 @@
   "name": "gas_clasp_template",
   "version": "0.0.1",
   "description": "",
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "yarn@1.22.22",
   "scripts": {
     "init-serve": "clasp login --no-localhost",
     "clasp-env": "cp .clasp-staging.json .clasp.json",
