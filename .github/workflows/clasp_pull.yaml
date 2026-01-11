@@ -11,6 +11,11 @@ on:
           - deployment
           - staging
           - production
+          - custom
+      script_id:
+        description: 'Script ID (required if environment is "custom")'
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -59,8 +64,16 @@ jobs:
       - name: Generate .clasp.json
         env:
           PREFIX: ${{ steps.secret-env.outputs.prefix }}
-          SCRIPT_ID: ${{ secrets[format('{0}SCRIPT_ID', steps.secret-env.outputs.prefix)] || secrets.SCRIPT_ID }}
+          INPUT_SCRIPT_ID: ${{ inputs.script_id }}
+          SECRET_SCRIPT_ID: ${{ secrets[format('{0}SCRIPT_ID', steps.secret-env.outputs.prefix)] || secrets.SCRIPT_ID }}
         run: |
+          # Use input script_id if provided (custom), otherwise use secret
+          if [ -n "$INPUT_SCRIPT_ID" ]; then
+            SCRIPT_ID="$INPUT_SCRIPT_ID"
+          else
+            SCRIPT_ID="$SECRET_SCRIPT_ID"
+          fi
+
           echo '{
             "scriptId": "'$SCRIPT_ID'",
             "rootDir": "./src"
