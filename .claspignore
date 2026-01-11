@@ -2,4 +2,4 @@
 !*.js
 !src/*.js
 !appsscript.json
-.eslintrc.js
+eslint.config.js

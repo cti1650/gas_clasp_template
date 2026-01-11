@@ -1,10 +1,10 @@
-name: Pull GAS Code
+name: Push GAS Code
 
 on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Select environment to pull code from'
+        description: 'Select environment to push code to'
         required: true
         type: choice
         options:
@@ -12,12 +12,8 @@ on:
           - staging
           - production
 
-permissions:
-  contents: write
-  pull-requests: write
-
 jobs:
-  pull:
+  push:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -66,15 +62,11 @@ jobs:
             "rootDir": "./src"
           }' | jq '.' > .clasp.json
 
-      - name: Pull GAS Code
-        run: |
-          mkdir -p ./src
-          clasp pull
-          echo "Pulled files:"
-          ls -la ./src
+      - name: Push GAS Code
+        run: clasp push
 
-      - name: Create PR
-        uses: ./.github/actions/create_pr
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          environment: ${{ inputs.environment }}
+      - name: Summary
+        run: |
+          echo "## Clasp Push Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment: ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Push Timestamp: $(date)" >> $GITHUB_STEP_SUMMARY
