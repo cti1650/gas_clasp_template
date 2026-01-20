@@ -1,4 +1,3 @@
 **/**
-!src/**/*.js
-!src/appsscript.json
-eslint.config.js
+!**/*.js
+!appsscript.json
